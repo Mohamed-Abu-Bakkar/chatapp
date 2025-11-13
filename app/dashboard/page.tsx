@@ -28,7 +28,18 @@ import type {
   DirectMessageThread,
   GroupMember,
 } from "@/app/lib/chat-types";
-import { MessageSquare, Hash, Trash2, Megaphone, User as UserIcon, LogOut, Plus, Menu, X, ArrowLeft } from "lucide-react";
+import {
+  MessageSquare,
+  Hash,
+  Trash2,
+  Megaphone,
+  User as UserIcon,
+  LogOut,
+  Plus,
+  Menu,
+  X,
+  ArrowLeft,
+} from "lucide-react";
 import { getGroupMembers, deleteGroup } from "@/app/lib/chat-service";
 
 export default function DashboardPage() {
@@ -46,10 +57,14 @@ export default function DashboardPage() {
   const [userGroupRole, setUserGroupRole] = useState<"admin" | "member">(
     "member"
   );
-  const [activeSection, setActiveSection] = useState<"Chats" | "Groups" | "Announcements">("Chats");
+  const [activeSection, setActiveSection] = useState<
+    "Chats" | "Groups" | "Announcements"
+  >("Chats");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
-  const [currentView, setCurrentView] = useState<"chatlist" | "chat">("chatlist");
+  const [currentView, setCurrentView] = useState<"chatlist" | "chat">(
+    "chatlist"
+  );
 
   useEffect(() => {
     async function checkUser() {
@@ -77,8 +92,8 @@ export default function DashboardPage() {
       setIsMobile(window.innerWidth < 768);
     };
     checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
   useEffect(() => {
@@ -315,78 +330,82 @@ export default function DashboardPage() {
 
                 {activeSection === "Groups" && (
                   <div className="p-2 space-y-1">
-                    {groups.filter(g => !g.isAnnouncement).length === 0 ? (
+                    {groups.filter((g) => !g.isAnnouncement).length === 0 ? (
                       <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                         <Hash className="h-8 w-8 mx-auto mb-2 opacity-50" />
                         <p className="text-sm">No groups yet</p>
                       </div>
                     ) : (
-                      groups.filter(g => !g.isAnnouncement).map((group) => (
-                        <button
-                          key={group.$id}
-                          onClick={() => {
-                            setSelectedChat({
-                              type: "group",
-                              id: group.$id,
-                              name: group.name,
-                            });
-                            setCurrentView("chat");
-                          }}
-                          className="w-full flex items-center gap-3 p-3 rounded-lg text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                        >
-                          <div className="w-10 h-10 bg-gray-500 rounded-full flex items-center justify-center text-white">
-                            <Hash className="h-5 w-5" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-gray-900 dark:text-white truncate">
-                              {group.name}
+                      groups
+                        .filter((g) => !g.isAnnouncement)
+                        .map((group) => (
+                          <button
+                            key={group.$id}
+                            onClick={() => {
+                              setSelectedChat({
+                                type: "group",
+                                id: group.$id,
+                                name: group.name,
+                              });
+                              setCurrentView("chat");
+                            }}
+                            className="w-full flex items-center gap-3 p-3 rounded-lg text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                          >
+                            <div className="w-10 h-10 bg-gray-500 rounded-full flex items-center justify-center text-white">
+                              <Hash className="h-5 w-5" />
                             </div>
-                            {group.description && (
-                              <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                                {group.description}
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-gray-900 dark:text-white truncate">
+                                {group.name}
                               </div>
-                            )}
-                          </div>
-                        </button>
-                      ))
+                              {group.description && (
+                                <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                                  {group.description}
+                                </div>
+                              )}
+                            </div>
+                          </button>
+                        ))
                     )}
                   </div>
                 )}
 
                 {activeSection === "Announcements" && (
                   <div className="p-2 space-y-1">
-                    {groups.filter(g => g.isAnnouncement).length === 0 ? (
+                    {groups.filter((g) => g.isAnnouncement).length === 0 ? (
                       <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                         <Megaphone className="h-8 w-8 mx-auto mb-2 opacity-50" />
                         <p className="text-sm">No announcements</p>
                       </div>
                     ) : (
-                      groups.filter(g => g.isAnnouncement).map((group) => (
-                        <button
-                          key={group.$id}
-                          onClick={() => {
-                            setSelectedChat({
-                              type: "group",
-                              id: group.$id,
-                              name: group.name,
-                            });
-                            setCurrentView("chat");
-                          }}
-                          className="w-full flex items-center gap-3 p-3 rounded-lg text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                        >
-                          <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center text-white">
-                            <Megaphone className="h-5 w-5" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-gray-900 dark:text-white truncate">
-                              {group.name}
+                      groups
+                        .filter((g) => g.isAnnouncement)
+                        .map((group) => (
+                          <button
+                            key={group.$id}
+                            onClick={() => {
+                              setSelectedChat({
+                                type: "group",
+                                id: group.$id,
+                                name: group.name,
+                              });
+                              setCurrentView("chat");
+                            }}
+                            className="w-full flex items-center gap-3 p-3 rounded-lg text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                          >
+                            <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center text-white">
+                              <Megaphone className="h-5 w-5" />
                             </div>
-                            <div className="text-sm text-orange-600 dark:text-orange-400">
-                              📢 Announcement Channel
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-gray-900 dark:text-white truncate">
+                                {group.name}
+                              </div>
+                              <div className="text-sm text-orange-600 dark:text-orange-400">
+                                📢 Announcement Channel
+                              </div>
                             </div>
-                          </div>
-                        </button>
-                      ))
+                          </button>
+                        ))
                     )}
                   </div>
                 )}
@@ -436,24 +455,28 @@ export default function DashboardPage() {
                         {selectedChat.name}
                       </h3>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {selectedChat.type === "group" ? "Group Chat" : "Direct Message"}
+                        {selectedChat.type === "group"
+                          ? "Group Chat"
+                          : "Direct Message"}
                       </p>
                     </div>
-                    {selectedChat.type === "group" && user && userGroupRole === "admin" && (
-                      <div className="flex gap-2">
-                        <GroupMembersDialog
-                          groupId={selectedChat.id}
-                          isAdmin={userGroupRole === "admin"}
-                          currentUserId={user.$id}
-                        />
-                        <AddMemberDialog
-                          groupId={selectedChat.id}
-                          institutionId={user.institutionId}
-                          currentUserId={user.$id}
-                          onMemberAdded={handleMemberAdded}
-                        />
-                      </div>
-                    )}
+                    {selectedChat.type === "group" &&
+                      user &&
+                      userGroupRole === "admin" && (
+                        <div className="flex gap-2">
+                          <GroupMembersDialog
+                            groupId={selectedChat.id}
+                            isAdmin={userGroupRole === "admin"}
+                            currentUserId={user.$id}
+                          />
+                          <AddMemberDialog
+                            groupId={selectedChat.id}
+                            institutionId={user.institutionId}
+                            currentUserId={user.$id}
+                            onMemberAdded={handleMemberAdded}
+                          />
+                        </div>
+                      )}
                   </div>
 
                   {/* Chat Messages */}
@@ -468,7 +491,8 @@ export default function DashboardPage() {
                         userRole={user.role}
                         isAnnouncement={
                           selectedChat.type === "group" &&
-                          groups.find((g) => g.$id === selectedChat.id)?.isAnnouncement
+                          groups.find((g) => g.$id === selectedChat.id)
+                            ?.isAnnouncement
                         }
                       />
                     )}
@@ -486,25 +510,37 @@ export default function DashboardPage() {
   return (
     <div className="h-screen flex bg-gray-50 dark:bg-gray-900">
       {/* Left Sidebar - Navigation */}
-      <div className={`bg-gray-100 dark:bg-gray-800 border-r border-gray-300 dark:border-gray-600 flex flex-col transition-all duration-300 ${
-        sidebarOpen ? 'w-1/6' : 'w-16'
-      }`}>
+      <div
+        className={`bg-gray-100 dark:bg-gray-800 border-r border-gray-300 dark:border-gray-600 flex flex-col transition-all duration-300 ${
+          sidebarOpen ? "w-1/6" : "w-16"
+        }`}
+      >
         {/* Sidebar Header with Toggle Button */}
         <div className="p-4 border-b border-gray-300 dark:border-gray-600 flex items-center justify-between">
-          {sidebarOpen && <h1 className="text-xl font-bold text-gray-800 dark:text-gray-200">ChatApp</h1>}
+          {sidebarOpen && (
+            <h1 className="text-xl font-bold text-gray-800 dark:text-gray-200">
+              ChatApp
+            </h1>
+          )}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
             aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
           >
-            {sidebarOpen ? <X className="h-5 w-5 text-gray-600 dark:text-gray-400" /> : <Menu className="h-5 w-5 text-gray-600 dark:text-gray-400" />}
+            {sidebarOpen ? (
+              <X className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+            ) : (
+              <Menu className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+            )}
           </button>
         </div>
 
         {/* User Info */}
         {sidebarOpen && (
           <div className="px-4 py-2 border-b border-gray-300 dark:border-gray-600">
-            <p className="text-sm text-gray-600 dark:text-gray-400">{user.username}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {user.username}
+            </p>
           </div>
         )}
 
@@ -525,7 +561,9 @@ export default function DashboardPage() {
             }`}
           >
             <MessageSquare className="h-5 w-5" />
-            <span className={`font-medium ${sidebarOpen ? '' : 'hidden'}`}>Chats</span>
+            <span className={`font-medium ${sidebarOpen ? "" : "hidden"}`}>
+              Chats
+            </span>
           </button>
 
           <button
@@ -543,7 +581,9 @@ export default function DashboardPage() {
             }`}
           >
             <Hash className="h-5 w-5" />
-            <span className={`font-medium ${sidebarOpen ? '' : 'hidden'}`}>Groups</span>
+            <span className={`font-medium ${sidebarOpen ? "" : "hidden"}`}>
+              Groups
+            </span>
           </button>
 
           <button
@@ -561,34 +601,46 @@ export default function DashboardPage() {
             }`}
           >
             <Megaphone className="h-5 w-5" />
-            <span className={`font-medium ${sidebarOpen ? '' : 'hidden'}`}>Announcements</span>
+            <span className={`font-medium ${sidebarOpen ? "" : "hidden"}`}>
+              Announcements
+            </span>
           </button>
         </nav>
 
         {/* Bottom Actions */}
         <div className="p-2 border-t border-gray-300 dark:border-gray-600 space-y-1">
-          <button 
+          <button
             onClick={() => router.push("/profile")}
-            className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${sidebarOpen ? '' : 'justify-center'}`}
+            className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${
+              sidebarOpen ? "" : "justify-center"
+            }`}
           >
             <UserIcon className="h-5 w-5" />
-            <span className={`font-medium ${sidebarOpen ? '' : 'hidden'}`}>Profile</span>
+            <span className={`font-medium ${sidebarOpen ? "" : "hidden"}`}>
+              Profile
+            </span>
           </button>
 
           <button
             onClick={handleLogout}
-            className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left text-gray-700 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors ${sidebarOpen ? '' : 'justify-center'}`}
+            className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left text-gray-700 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors ${
+              sidebarOpen ? "" : "justify-center"
+            }`}
           >
             <LogOut className="h-5 w-5" />
-            <span className={`font-medium ${sidebarOpen ? '' : 'hidden'}`}>Logout</span>
+            <span className={`font-medium ${sidebarOpen ? "" : "hidden"}`}>
+              Logout
+            </span>
           </button>
         </div>
       </div>
 
       {/* Middle Panel - Chat/Group List */}
-      <div className={`bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col transition-all duration-300 ${
-        sidebarOpen ? 'w-1/4' : 'w-1/3'
-      }`}>
+      <div
+        className={`bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col transition-all duration-300 ${
+          sidebarOpen ? "w-1/4" : "w-1/3"
+        }`}
+      >
         {/* Header */}
         <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white capitalize">
@@ -662,86 +714,90 @@ export default function DashboardPage() {
 
           {activeSection === "Groups" && (
             <div className="p-2 space-y-1">
-              {groups.filter(g => !g.isAnnouncement).length === 0 ? (
+              {groups.filter((g) => !g.isAnnouncement).length === 0 ? (
                 <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                   <Hash className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   <p className="text-sm">No groups yet</p>
                 </div>
               ) : (
-                groups.filter(g => !g.isAnnouncement).map((group) => (
-                  <button
-                    key={group.$id}
-                    onClick={() => {
-                      setSelectedChat({
-                        type: "group",
-                        id: group.$id,
-                        name: group.name,
-                      });
-                      if (isMobile) setCurrentView("chat");
-                    }}
-                    className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors ${
-                      selectedChat?.id === group.$id
-                        ? "bg-blue-100 dark:bg-blue-900"
-                        : "hover:bg-gray-100 dark:hover:bg-gray-700"
-                    }`}
-                  >
-                    <div className="w-10 h-10 bg-gray-500 rounded-full flex items-center justify-center text-white">
-                      <Hash className="h-5 w-5" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-gray-900 dark:text-white truncate">
-                        {group.name}
+                groups
+                  .filter((g) => !g.isAnnouncement)
+                  .map((group) => (
+                    <button
+                      key={group.$id}
+                      onClick={() => {
+                        setSelectedChat({
+                          type: "group",
+                          id: group.$id,
+                          name: group.name,
+                        });
+                        if (isMobile) setCurrentView("chat");
+                      }}
+                      className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors ${
+                        selectedChat?.id === group.$id
+                          ? "bg-blue-100 dark:bg-blue-900"
+                          : "hover:bg-gray-100 dark:hover:bg-gray-700"
+                      }`}
+                    >
+                      <div className="w-10 h-10 bg-gray-500 rounded-full flex items-center justify-center text-white">
+                        <Hash className="h-5 w-5" />
                       </div>
-                      {group.description && (
-                        <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                          {group.description}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-gray-900 dark:text-white truncate">
+                          {group.name}
                         </div>
-                      )}
-                    </div>
-                  </button>
-                ))
+                        {group.description && (
+                          <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                            {group.description}
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  ))
               )}
             </div>
           )}
 
           {activeSection === "Announcements" && (
             <div className="p-2 space-y-1">
-              {groups.filter(g => g.isAnnouncement).length === 0 ? (
+              {groups.filter((g) => g.isAnnouncement).length === 0 ? (
                 <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                   <Megaphone className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   <p className="text-sm">No announcements</p>
                 </div>
               ) : (
-                groups.filter(g => g.isAnnouncement).map((group) => (
-                  <button
-                    key={group.$id}
-                    onClick={() => {
-                      setSelectedChat({
-                        type: "group",
-                        id: group.$id,
-                        name: group.name,
-                      });
-                      if (isMobile) setCurrentView("chat");
-                    }}
-                    className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors ${
-                      selectedChat?.id === group.$id
-                        ? "bg-blue-100 dark:bg-blue-900"
-                        : "hover:bg-gray-100 dark:hover:bg-gray-700"
-                    }`}
-                  >
-                    <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center text-white">
-                      <Megaphone className="h-5 w-5" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-gray-900 dark:text-white truncate">
-                        {group.name}
+                groups
+                  .filter((g) => g.isAnnouncement)
+                  .map((group) => (
+                    <button
+                      key={group.$id}
+                      onClick={() => {
+                        setSelectedChat({
+                          type: "group",
+                          id: group.$id,
+                          name: group.name,
+                        });
+                        if (isMobile) setCurrentView("chat");
+                      }}
+                      className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors ${
+                        selectedChat?.id === group.$id
+                          ? "bg-blue-100 dark:bg-blue-900"
+                          : "hover:bg-gray-100 dark:hover:bg-gray-700"
+                      }`}
+                    >
+                      <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center text-white">
+                        <Megaphone className="h-5 w-5" />
                       </div>
-                      <div className="text-sm text-orange-600 dark:text-orange-400">
-                        📢 Announcement Channel
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-gray-900 dark:text-white truncate">
+                          {group.name}
+                        </div>
+                        <div className="text-sm text-orange-600 dark:text-orange-400">
+                          📢 Announcement Channel
+                        </div>
                       </div>
-                    </div>
-                  </button>
-                ))
+                    </button>
+                  ))
               )}
             </div>
           )}
@@ -759,7 +815,9 @@ export default function DashboardPage() {
                   {selectedChat.name}
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {selectedChat.type === "group" ? "Group Chat" : "Direct Message"}
+                  {selectedChat.type === "group"
+                    ? "Group Chat"
+                    : "Direct Message"}
                 </p>
               </div>
               {selectedChat.type === "group" && user && (
@@ -802,7 +860,8 @@ export default function DashboardPage() {
                   userRole={user.role}
                   isAnnouncement={
                     selectedChat.type === "group" &&
-                    groups.find((g) => g.$id === selectedChat.id)?.isAnnouncement
+                    groups.find((g) => g.$id === selectedChat.id)
+                      ?.isAnnouncement
                   }
                 />
               )}
@@ -812,7 +871,9 @@ export default function DashboardPage() {
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center text-gray-500 dark:text-gray-400">
               <MessageSquare className="h-16 w-16 mx-auto mb-4 opacity-50" />
-              <h3 className="text-xl font-semibold mb-2">Select a conversation</h3>
+              <h3 className="text-xl font-semibold mb-2">
+                Select a conversation
+              </h3>
               <p className="text-sm">
                 Choose a chat from the {activeSection} list to start messaging
               </p>

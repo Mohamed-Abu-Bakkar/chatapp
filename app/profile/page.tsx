@@ -6,8 +6,20 @@ import { getCurrentUser, logoutUser, updateUserProfile } from "@/app/lib/auth";
 import { useUserStore } from "@/app/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, User as UserIcon, Mail, Building2, Shield } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  ArrowLeft,
+  User as UserIcon,
+  Mail,
+  Building2,
+  Shield,
+} from "lucide-react";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -15,7 +27,10 @@ export default function ProfilePage() {
   const setUser = useUserStore((state) => state.setUser);
   const [loading, setLoading] = useState(false);
   const [username, setUsername] = useState("");
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [message, setMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
   useEffect(() => {
     async function checkUser() {
@@ -47,15 +62,18 @@ export default function ProfilePage() {
 
     try {
       await updateUserProfile(user.$id, username.trim());
-      
+
       // Update local user state
       const updatedUser = { ...user, username: username.trim() };
       setUser(updatedUser);
-      
+
       setMessage({ type: "success", text: "Profile updated successfully!" });
     } catch (error: any) {
       console.error("Error updating profile:", error);
-      setMessage({ type: "error", text: error.message || "Failed to update profile" });
+      setMessage({
+        type: "error",
+        text: error.message || "Failed to update profile",
+      });
     } finally {
       setLoading(false);
     }
@@ -88,8 +106,12 @@ export default function ProfilePage() {
       {/* Main Content */}
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Profile Settings</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">Manage your account information</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            Profile Settings
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
+            Manage your account information
+          </p>
         </div>
 
         <div className="grid gap-6">
@@ -114,7 +136,10 @@ export default function ProfilePage() {
                 )}
 
                 <div>
-                  <label htmlFor="username" className="block text-sm font-medium mb-2">
+                  <label
+                    htmlFor="username"
+                    className="block text-sm font-medium mb-2"
+                  >
                     Username
                   </label>
                   <Input
@@ -129,7 +154,10 @@ export default function ProfilePage() {
                   />
                 </div>
 
-                <Button type="submit" disabled={loading || username.trim() === user.username}>
+                <Button
+                  type="submit"
+                  disabled={loading || username.trim() === user.username}
+                >
                   {loading ? "Updating..." : "Update Profile"}
                 </Button>
               </form>
@@ -140,29 +168,41 @@ export default function ProfilePage() {
           <Card>
             <CardHeader>
               <CardTitle>Account Details</CardTitle>
-              <CardDescription>Your account information (read-only)</CardDescription>
+              <CardDescription>
+                Your account information (read-only)
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
                 <UserIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
                 <div className="flex-1">
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Username</div>
-                  <div className="font-medium text-gray-900 dark:text-white">{user.username}</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    Username
+                  </div>
+                  <div className="font-medium text-gray-900 dark:text-white">
+                    {user.username}
+                  </div>
                 </div>
               </div>
 
               <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
                 <Mail className="h-5 w-5 text-gray-600 dark:text-gray-400" />
                 <div className="flex-1">
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Email</div>
-                  <div className="font-medium text-gray-900 dark:text-white">{user.email}</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    Email
+                  </div>
+                  <div className="font-medium text-gray-900 dark:text-white">
+                    {user.email}
+                  </div>
                 </div>
               </div>
 
               <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
                 <Building2 className="h-5 w-5 text-gray-600 dark:text-gray-400" />
                 <div className="flex-1">
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Institution ID</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    Institution ID
+                  </div>
                   <div className="font-medium text-gray-900 dark:text-white font-mono text-sm">
                     {user.institutionId}
                   </div>
@@ -172,7 +212,9 @@ export default function ProfilePage() {
               <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
                 <Shield className="h-5 w-5 text-gray-600 dark:text-gray-400" />
                 <div className="flex-1">
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Role</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    Role
+                  </div>
                   <div className="font-medium text-gray-900 dark:text-white capitalize">
                     {user.role}
                   </div>

@@ -75,7 +75,11 @@ export function CreateGroupDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className={isMobile ? "w-full h-full max-w-full max-h-full m-0 rounded-none" : ""}>
+      <DialogContent
+        className={
+          isMobile ? "w-full h-full max-w-full max-h-full m-0 rounded-none" : ""
+        }
+      >
         <DialogHeader>
           <DialogTitle>Create New Group</DialogTitle>
           <DialogDescription>

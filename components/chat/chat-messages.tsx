@@ -12,7 +12,14 @@ import {
   deleteMessageForEveryone,
 } from "@/app/lib/chat-service";
 import type { Message } from "@/app/lib/chat-types";
-import { Send, MoreVertical, Trash2, MessageSquare, Megaphone, Clock } from "lucide-react";
+import {
+  Send,
+  MoreVertical,
+  Trash2,
+  MessageSquare,
+  Megaphone,
+  Clock,
+} from "lucide-react";
 import { realtime } from "@/app/lib/appwrite";
 
 interface ChatMessagesProps {
@@ -253,16 +260,19 @@ export function ChatMessages({
               <p className="text-base text-gray-500 dark:text-gray-400 max-w-sm leading-relaxed px-2">
                 {isAnnouncement
                   ? "Announcements from administrators and teachers will appear here."
-                  : "Start the conversation by sending the first message."
-                }
+                  : "Start the conversation by sending the first message."}
               </p>
             </div>
           ) : (
             messages.map((msg, index) => {
               const isOwnMessage = msg.senderId === currentUserId;
-              const showAvatar = !isOwnMessage && (index === 0 || messages[index - 1].senderId !== msg.senderId);
-              const showTimestamp = index === 0 ||
-                new Date(msg.createdAt).toDateString() !== new Date(messages[index - 1].createdAt).toDateString();
+              const showAvatar =
+                !isOwnMessage &&
+                (index === 0 || messages[index - 1].senderId !== msg.senderId);
+              const showTimestamp =
+                index === 0 ||
+                new Date(msg.createdAt).toDateString() !==
+                  new Date(messages[index - 1].createdAt).toDateString();
 
               return (
                 <div key={msg.$id}>
@@ -271,12 +281,13 @@ export function ChatMessages({
                     <div className="flex justify-center my-4 md:my-6">
                       <div className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs px-3 py-1 rounded-full font-medium">
                         {new Date(msg.createdAt).toLocaleDateString([], {
-                          weekday: 'long',
-                          month: 'short',
-                          day: 'numeric',
-                          ...(new Date(msg.createdAt).getFullYear() !== new Date().getFullYear() && {
-                            year: 'numeric'
-                          })
+                          weekday: "long",
+                          month: "short",
+                          day: "numeric",
+                          ...(new Date(msg.createdAt).getFullYear() !==
+                            new Date().getFullYear() && {
+                            year: "numeric",
+                          }),
                         })}
                       </div>
                     </div>
@@ -287,99 +298,117 @@ export function ChatMessages({
                       isOwnMessage ? "justify-end" : "justify-start"
                     }`}
                   >
-                  {/* Avatar for other users - hidden on mobile for cleaner look */}
-                  {!isOwnMessage && (
-                    <div className={`hidden md:flex w-8 h-8 rounded-full items-center justify-center text-xs font-semibold ${
-                      showAvatar
-                        ? "bg-blue-600 text-white"
-                        : "bg-transparent"
-                    }`}>
-                      {showAvatar ? msg.senderUsername.charAt(0).toUpperCase() : ""}
-                    </div>
-                  )}
-
-                  {/* Message Bubble */}
-                  <div className={`relative max-w-[85%] sm:max-w-[75%] md:max-w-[65%] ${isOwnMessage ? "order-1" : "order-2"}`}>
-                    {/* Sender name for group messages - smaller on mobile */}
-                    {!isOwnMessage && showAvatar && (
-                      <div className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1 px-2 md:px-1">
-                        {msg.senderUsername}
+                    {/* Avatar for other users - hidden on mobile for cleaner look */}
+                    {!isOwnMessage && (
+                      <div
+                        className={`hidden md:flex w-8 h-8 rounded-full items-center justify-center text-xs font-semibold ${
+                          showAvatar
+                            ? "bg-blue-600 text-white"
+                            : "bg-transparent"
+                        }`}
+                      >
+                        {showAvatar
+                          ? msg.senderUsername.charAt(0).toUpperCase()
+                          : ""}
                       </div>
                     )}
 
+                    {/* Message Bubble */}
                     <div
-                      className={`relative px-3 py-2 rounded-2xl shadow-sm md:px-4 md:py-3 ${
-                        msg.deletedForEveryone
-                          ? "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 italic"
-                          : isOwnMessage
-                          ? "bg-blue-600 text-white ml-12 md:ml-0"
-                          : "bg-white dark:bg-gray-800 text-gray-900 dark:text-white mr-12 md:mr-0 border border-gray-200 dark:border-gray-700"
+                      className={`relative max-w-[85%] sm:max-w-[75%] md:max-w-[65%] ${
+                        isOwnMessage ? "order-1" : "order-2"
                       }`}
                     >
-                      {msg.deletedForEveryone ? (
-                        <div className="flex items-center gap-2">
-                          <Trash2 className="w-4 h-4" />
-                          <span className="text-sm md:text-base">This message was deleted</span>
+                      {/* Sender name for group messages - smaller on mobile */}
+                      {!isOwnMessage && showAvatar && (
+                        <div className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1 px-2 md:px-1">
+                          {msg.senderUsername}
                         </div>
-                      ) : (
-                        <>
-                          <div className="text-sm md:text-base leading-relaxed break-words">
-                            {msg.content}
-                          </div>
-                          <div className={`flex items-center justify-end gap-1 mt-1 text-xs md:mt-2 ${
-                            isOwnMessage
-                              ? "text-blue-100"
-                              : "text-gray-500 dark:text-gray-400"
-                          }`}>
-                            <Clock className="w-3 h-3" />
-                            {new Date(msg.createdAt).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </div>
-                        </>
                       )}
 
-                      {/* Message tail - WhatsApp style */}
-                      <div className={`absolute top-0 w-0 h-0 ${
-                        isOwnMessage
-                          ? "-right-2 border-l-[6px] border-l-blue-600 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent"
-                          : "-left-2 border-r-[6px] border-r-white dark:border-r-gray-800 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent"
-                      }`} />
-                    </div>
+                      <div
+                        className={`relative px-3 py-2 rounded-2xl shadow-sm md:px-4 md:py-3 ${
+                          msg.deletedForEveryone
+                            ? "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 italic"
+                            : isOwnMessage
+                            ? "bg-blue-600 text-white ml-12 md:ml-0"
+                            : "bg-white dark:bg-gray-800 text-gray-900 dark:text-white mr-12 md:mr-0 border border-gray-200 dark:border-gray-700"
+                        }`}
+                      >
+                        {msg.deletedForEveryone ? (
+                          <div className="flex items-center gap-2">
+                            <Trash2 className="w-4 h-4" />
+                            <span className="text-sm md:text-base">
+                              This message was deleted
+                            </span>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="text-sm md:text-base leading-relaxed break-words">
+                              {msg.content}
+                            </div>
+                            <div
+                              className={`flex items-center justify-end gap-1 mt-1 text-xs md:mt-2 ${
+                                isOwnMessage
+                                  ? "text-blue-100"
+                                  : "text-gray-500 dark:text-gray-400"
+                              }`}
+                            >
+                              <Clock className="w-3 h-3" />
+                              {new Date(msg.createdAt).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </div>
+                          </>
+                        )}
 
-                    {/* Delete buttons - touch-friendly on mobile */}
-                    {!msg.deletedForEveryone && (
-                      <div className={`absolute -top-1 md:-top-2 ${
-                        isOwnMessage ? "-left-10 md:-left-12" : "-right-10 md:-right-12"
-                      } opacity-0 group-hover:opacity-100 md:group-hover:opacity-100 transition-all duration-200 flex flex-col gap-1 z-10`}>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteForMe(msg.$id)}
-                          className="h-8 w-8 md:h-8 md:w-8 p-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors rounded-full active:scale-95"
-                          title="Delete for me"
+                        {/* Message tail - WhatsApp style */}
+                        <div
+                          className={`absolute top-0 w-0 h-0 ${
+                            isOwnMessage
+                              ? "-right-2 border-l-[6px] border-l-blue-600 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent"
+                              : "-left-2 border-r-[6px] border-r-white dark:border-r-gray-800 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent"
+                          }`}
+                        />
+                      </div>
+
+                      {/* Delete buttons - touch-friendly on mobile */}
+                      {!msg.deletedForEveryone && (
+                        <div
+                          className={`absolute -top-1 md:-top-2 ${
+                            isOwnMessage
+                              ? "-left-10 md:-left-12"
+                              : "-right-10 md:-right-12"
+                          } opacity-0 group-hover:opacity-100 md:group-hover:opacity-100 transition-all duration-200 flex flex-col gap-1 z-10`}
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                        {isOwnMessage && (
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleDeleteForEveryone(msg.$id)}
+                            onClick={() => handleDeleteForMe(msg.$id)}
                             className="h-8 w-8 md:h-8 md:w-8 p-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors rounded-full active:scale-95"
-                            title="Delete for everyone"
+                            title="Delete for me"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                          {isOwnMessage && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteForEveryone(msg.$id)}
+                              className="h-8 w-8 md:h-8 md:w-8 p-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors rounded-full active:scale-95"
+                              title="Delete for everyone"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </div>
 
-                  {/* Spacer for own messages - adjusted for mobile */}
-                  {isOwnMessage && <div className="w-2 md:w-8" />}
-                </div>
+                    {/* Spacer for own messages - adjusted for mobile */}
+                    {isOwnMessage && <div className="w-2 md:w-8" />}
+                  </div>
                 </div>
               );
             })
@@ -391,23 +420,31 @@ export function ChatMessages({
       {/* Message Input Area - WhatsApp style */}
       {(() => {
         const canSend =
-          !isAnnouncement || userRole === "Admin" || userRole === "admin" || userRole === "teacher";
+          !isAnnouncement ||
+          userRole === "Admin" ||
+          userRole === "admin" ||
+          userRole === "teacher";
         return canSend;
       })() && (
         <div className="bg-white dark:bg-gray-950 border-t border-gray-200 dark:border-gray-800 px-3 py-2 md:px-4 md:py-4 safe-area-inset-bottom">
-          <form onSubmit={handleSend} className="flex items-end gap-2 md:gap-3 max-w-4xl mx-auto">
+          <form
+            onSubmit={handleSend}
+            className="flex items-end gap-2 md:gap-3 max-w-4xl mx-auto"
+          >
             <div className="flex-1 relative">
               <Input
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 placeholder={
-                  isAnnouncement ? "Send an announcement..." : "Type a message..."
+                  isAnnouncement
+                    ? "Send an announcement..."
+                    : "Type a message..."
                 }
                 disabled={loading}
                 maxLength={5000}
                 className="min-h-10 md:min-h-11 resize-none border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 rounded-full px-4 py-2 md:px-4 md:py-3 pr-12 md:pr-12 text-base shadow-sm"
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
+                  if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
                     handleSend(e);
                   }
@@ -431,21 +468,24 @@ export function ChatMessages({
       )}
 
       {/* Read-only Notice for Announcement Groups - mobile optimized */}
-      {isAnnouncement && userRole !== "Admin" && userRole !== "admin" && userRole !== "teacher" && (
-        <div className="bg-orange-50 dark:bg-orange-950/20 border-t border-orange-200 dark:border-orange-800 px-4 py-3 md:px-4 md:py-4">
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <Megaphone className="w-5 h-5 text-orange-600" />
-              <span className="text-sm font-medium text-orange-800 dark:text-orange-200">
-                Announcement Channel
-              </span>
+      {isAnnouncement &&
+        userRole !== "Admin" &&
+        userRole !== "admin" &&
+        userRole !== "teacher" && (
+          <div className="bg-orange-50 dark:bg-orange-950/20 border-t border-orange-200 dark:border-orange-800 px-4 py-3 md:px-4 md:py-4">
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Megaphone className="w-5 h-5 text-orange-600" />
+                <span className="text-sm font-medium text-orange-800 dark:text-orange-200">
+                  Announcement Channel
+                </span>
+              </div>
+              <p className="text-sm text-orange-700 dark:text-orange-300 leading-relaxed">
+                Only administrators and teachers can post messages here.
+              </p>
             </div>
-            <p className="text-sm text-orange-700 dark:text-orange-300 leading-relaxed">
-              Only administrators and teachers can post messages here.
-            </p>
           </div>
-        </div>
-      )}
+        )}
     </div>
   );
 }

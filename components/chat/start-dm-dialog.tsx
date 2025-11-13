@@ -88,7 +88,11 @@ export function StartDMDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className={isMobile ? "w-full h-full max-w-full max-h-full m-0 rounded-none" : ""}>
+      <DialogContent
+        className={
+          isMobile ? "w-full h-full max-w-full max-h-full m-0 rounded-none" : ""
+        }
+      >
         <DialogHeader>
           <DialogTitle>Start Direct Message</DialogTitle>
           <DialogDescription>
@@ -106,7 +110,11 @@ export function StartDMDialog({
             />
           </div>
 
-          <div className={`space-y-2 overflow-y-auto ${isMobile ? 'max-h-[calc(100vh-200px)]' : 'max-h-96'}`}>
+          <div
+            className={`space-y-2 overflow-y-auto ${
+              isMobile ? "max-h-[calc(100vh-200px)]" : "max-h-96"
+            }`}
+          >
             {loading ? (
               <div className="text-center py-4 text-muted-foreground">
                 Loading...

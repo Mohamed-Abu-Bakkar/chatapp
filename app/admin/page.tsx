@@ -148,7 +148,11 @@ export default function AdminPage() {
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (!confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
+    if (
+      !confirm(
+        "Are you sure you want to delete this user? This action cannot be undone."
+      )
+    ) {
       return;
     }
 
@@ -235,7 +239,7 @@ export default function AdminPage() {
           </CardContent>
         </Card>
 
-             <Card className="mt-6">
+        <Card className="mt-6">
           <CardHeader>
             <CardTitle>User Management</CardTitle>
             <CardDescription>
@@ -289,7 +293,12 @@ export default function AdminPage() {
                       <select
                         aria-label={`Change role for ${user.username}`}
                         value={user.role}
-                        onChange={(e) => handleRoleChange(user.$id, e.target.value as User["role"])}
+                        onChange={(e) =>
+                          handleRoleChange(
+                            user.$id,
+                            e.target.value as User["role"]
+                          )
+                        }
                         className="px-2 py-1 border rounded text-sm"
                       >
                         <option value="student">Student</option>
@@ -308,7 +317,8 @@ export default function AdminPage() {
                           <DialogHeader>
                             <DialogTitle>Delete User</DialogTitle>
                             <DialogDescription>
-                              Are you sure you want to delete {user.username}? This action cannot be undone.
+                              Are you sure you want to delete {user.username}?
+                              This action cannot be undone.
                             </DialogDescription>
                           </DialogHeader>
                           <DialogFooter>
