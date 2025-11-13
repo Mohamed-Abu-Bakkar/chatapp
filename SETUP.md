@@ -28,19 +28,49 @@ Attributes:
 Indexes:
 - Create index on `code` for fast lookups
 
-#### Users Collection (`users`)
+#### Messages Collection (`messages`)
 Attributes:
-- `userId` (String, required) - Appwrite user ID
-- `name` (String, required)
-- `email` (String, required)
-- `role` (String, required) - Enum: "student", "teacher", "admin"
-- `status` (String, required) - Enum: "pending", "approved"
-- `institutionId` (String, required) - Reference to institution
-- `institutionName` (String, optional)
+- `senderId` (String, required)
+- `senderUsername` (String, required)
+- `content` (String, required)
+- `type` (String, required) - Enum: "group", "direct"
+- `groupId` (String, optional) - For group messages
+- `recipientId` (String, optional) - For direct messages
+- `createdAt` (String, required)
+- `readBy` (String array, required)
+- `deletedBy` (String array, optional) - Array of user IDs who deleted this message for themselves
+- `deletedForEveryone` (Boolean, optional) - Whether this message was deleted for all users
 
 Indexes:
-- Create index on `userId` for user lookups
-- Create index on `status` for pending user queries
+- Create index on `groupId` for group message queries
+- Create index on `type` for message type filtering
+- Create composite index on `senderId` and `recipientId` for direct message queries
+
+#### Groups Collection (`groups`)
+Attributes:
+- `name` (String, required)
+- `description` (String, optional)
+- `institutionId` (String, required)
+- `createdBy` (String, required)
+- `createdAt` (String, required)
+- `isPrivate` (Boolean, required)
+- `isAnnouncement` (Boolean, optional) - Whether this is an announcement group
+
+Indexes:
+- Create index on `institutionId` for institution filtering
+- Create index on `isAnnouncement` for announcement group queries
+
+#### Group Members Collection (`group_members`)
+Attributes:
+- `groupId` (String, required)
+- `userId` (String, required)
+- `username` (String, required)
+- `role` (String, required) - Enum: "admin", "member"
+- `joinedAt` (String, required)
+
+Indexes:
+- Create index on `groupId` for group member queries
+- Create composite index on `userId` and `groupId` for membership checks
 
 ### 3. Create Sample Institution
 

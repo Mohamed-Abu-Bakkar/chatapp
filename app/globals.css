@@ -120,3 +120,47 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Custom scrollbar styles for chat messages */
+.chat-messages-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-messages-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-messages-scroll::-webkit-scrollbar-thumb {
+  background: rgb(203 213 225);
+  border-radius: 3px;
+}
+
+.chat-messages-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgb(148 163 184);
+}
+
+.dark .chat-messages-scroll::-webkit-scrollbar-thumb {
+  background: rgb(71 85 105);
+}
+
+.dark .chat-messages-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgb(100 116 139);
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .chat-messages-scroll {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Safe area support for modern mobile devices */
+  .safe-area-inset-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Improve touch targets on mobile */
+  button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}

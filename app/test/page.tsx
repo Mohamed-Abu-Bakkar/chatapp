@@ -64,8 +64,7 @@ Users Collection: ${process.env.NEXT_PUBLIC_APPWRITE_USERS_COLLECTION_ID}`);
           console.log("📡 Making request to institutions collection...");
           const institutions = await databases.listDocuments(
             process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
-            process.env.NEXT_PUBLIC_APPWRITE_INSTITUTIONS_COLLECTION_ID ||
-              "institutions"
+            process.env.NEXT_PUBLIC_APPWRITE_INSTITUTIONS_COLLECTION_ID!
           );
           console.log("✅ Institutions fetch successful:", institutions);
           setDatabaseTest(
@@ -180,7 +179,7 @@ Users Collection: ${process.env.NEXT_PUBLIC_APPWRITE_USERS_COLLECTION_ID}`);
             <h2 className="font-semibold mb-2">Authentication Status</h2>
             <p>
               {user
-                ? `✅ Logged in as: ${user.name} (${user.email})`
+                ? `✅ Logged in as: ${user.username} (${user.email})`
                 : "❌ Not authenticated"}
             </p>
           </div>

@@ -20,7 +20,7 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [formData, setFormData] = useState({
-    name: "",
+    username: "",
     email: "",
     password: "",
     institutionCode: "",
@@ -33,7 +33,7 @@ export default function RegisterPage() {
 
     try {
       const user = await registerUser(
-        formData.name,
+        formData.username,
         formData.email,
         formData.password,
         formData.institutionCode
@@ -65,18 +65,21 @@ export default function RegisterPage() {
               </div>
             )}
             <div>
-              <label htmlFor="name" className="block text-sm font-medium mb-1">
-                Full Name
+              <label
+                htmlFor="username"
+                className="block text-sm font-medium mb-1"
+              >
+                Username
               </label>
               <Input
-                id="name"
+                id="username"
                 type="text"
                 required
-                value={formData.name}
+                value={formData.username}
                 onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
+                  setFormData({ ...formData, username: e.target.value })
                 }
-                placeholder="John Doe"
+                placeholder="jdoe"
               />
             </div>
             <div>

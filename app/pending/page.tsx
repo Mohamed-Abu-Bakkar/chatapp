@@ -68,7 +68,7 @@ export default function PendingPage() {
         <CardContent className="space-y-4">
           <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-md">
             <p className="text-sm text-blue-800 dark:text-blue-200">
-              Hello {user.name}, your registration has been received. An
+              Hello {user.username}, your registration has been received. An
               administrator will review your account and approve it shortly.
               Please check back later.
             </p>
