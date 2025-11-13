@@ -33,7 +33,7 @@ import {
 import { realtime } from "@/app/lib/appwrite";
 
 const DATABASE_ID =
-  process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || "academic_chat";
+  process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || "academic_chat_db";
 const USERS_COLLECTION_ID =
   process.env.NEXT_PUBLIC_APPWRITE_USERS_COLLECTION_ID || "users";
 

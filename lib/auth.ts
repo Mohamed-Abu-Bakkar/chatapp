@@ -5,7 +5,7 @@ import { ID, Query } from "appwrite";
 import { useUserStore } from "../app/lib/store";
 
 // Database and Collection IDs (should be set in environment variables)
-const DATABASE_ID = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || "academic_chat";
+const DATABASE_ID = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || "academic_chat_db";
 const USERS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_USERS_COLLECTION_ID || "users";
 const INSTITUTIONS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_INSTITUTIONS_COLLECTION_ID || "institutions";
 
