@@ -31,6 +31,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { realtime } from "@/app/lib/appwrite";
+import type { RealtimeSubscription } from "appwrite";
 
 const DATABASE_ID =
   process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || "academic_chat_db";
@@ -45,7 +46,7 @@ export default function AdminPage() {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingUsers, setLoadingUsers] = useState(false);
-  const subscriptionRef = useRef<unknown>(null);
+  const subscriptionRef = useRef<RealtimeSubscription | null>(null);
 
   const loadPendingUsers = useCallback(async () => {
     try {
@@ -98,31 +99,39 @@ export default function AdminPage() {
 
     // Set up realtime subscription for pending users
     const setupSubscription = async () => {
-      const subscription = await realtime.subscribe(
-        `databases.${DATABASE_ID}.collections.${USERS_COLLECTION_ID}.documents`,
-        (response) => {
-          if (
-            response.events.includes(
-              "databases.*.collections.*.documents.*.create"
-            ) ||
-            response.events.includes(
-              "databases.*.collections.*.documents.*.update"
-            )
-          ) {
-            loadPendingUsers();
+      try {
+        const subscription = await realtime.subscribe(
+          `databases.${DATABASE_ID}.collections.${USERS_COLLECTION_ID}.documents`,
+          (response) => {
+            if (
+              response.events.includes(
+                "databases.*.collections.*.documents.*.create"
+              ) ||
+              response.events.includes(
+                "databases.*.collections.*.documents.*.update"
+              )
+            ) {
+              loadPendingUsers();
+            }
           }
-        }
-      );
-      subscriptionRef.current = subscription;
+        );
+        subscriptionRef.current = subscription;
+      } catch (error) {
+        console.error("Failed to start realtime subscription:", error);
+      }
     };
 
     setupSubscription();
 
     return () => {
-      if (subscriptionRef.current) {
-        (subscriptionRef.current as () => void)();
-        subscriptionRef.current = null;
-      }
+      const subscription = subscriptionRef.current;
+      if (!subscription) return;
+
+      subscription.close().catch((error) => {
+        console.error("Failed to close realtime subscription:", error);
+      });
+
+      subscriptionRef.current = null;
     };
   }, [user, loadPendingUsers, loadAllUsers]);
 

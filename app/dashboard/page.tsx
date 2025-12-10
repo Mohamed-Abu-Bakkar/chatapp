@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import { getCurrentUser, logoutUser, type User } from "@/app/lib/auth";
 import { useUserStore } from "@/app/lib/store";
 import { Button } from "@/components/ui/button";
@@ -13,8 +14,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  getUserGroups,
-  getUserDMThreads,
   getAnnouncementGroup,
   createAnnouncementGroup,
 } from "@/app/lib/chat-service";
@@ -39,15 +38,33 @@ import {
   Menu,
   X,
   ArrowLeft,
+  Loader2,
 } from "lucide-react";
 import { getGroupMembers, deleteGroup } from "@/app/lib/chat-service";
+import {
+  useUserGroups,
+  useUserDMThreads,
+  useDeleteGroup,
+} from "@/app/lib/hooks/use-chat-queries";
 
 export default function DashboardPage() {
   const router = useRouter();
   const user = useUserStore((state) => state.user);
   const setUser = useUserStore((state) => state.setUser);
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [dmThreads, setDMThreads] = useState<DirectMessageThread[]>([]);
+
+  // Use TanStack Query hooks for data fetching
+  const {
+    data: groups = [],
+    isLoading: groupsLoading,
+    refetch: refetchGroups,
+  } = useUserGroups(user?.$id, user?.institutionId);
+  const {
+    data: dmThreads = [],
+    isLoading: dmThreadsLoading,
+    refetch: refetchDMThreads,
+  } = useUserDMThreads(user?.$id);
+  const deleteGroupMutation = useDeleteGroup();
+
   const [selectedChat, setSelectedChat] = useState<{
     type: "group" | "direct";
     id: string;
@@ -79,13 +96,24 @@ export default function DashboardPage() {
           return;
         }
         setUser(currentUser);
-        await loadChats(currentUser);
+
+        // Ensure announcement group exists
+        if (currentUser.institutionId) {
+          let announcementGroup = await getAnnouncementGroup(
+            currentUser.institutionId
+          );
+          if (!announcementGroup) {
+            await createAnnouncementGroup(currentUser.institutionId);
+            // Refetch groups after creating announcement group
+            refetchGroups();
+          }
+        }
       } catch {
         router.push("/login");
       }
     }
     checkUser();
-  }, [router, setUser]);
+  }, [router, setUser, refetchGroups]);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -102,30 +130,6 @@ export default function DashboardPage() {
     }
   }, [selectedChat, user]);
 
-  const loadChats = async (user: User) => {
-    const [userGroups, userDMs] = await Promise.all([
-      getUserGroups(user.$id),
-      getUserDMThreads(user.$id),
-    ]);
-
-    // Ensure announcement group exists and is included
-    if (user.institutionId) {
-      let announcementGroup = await getAnnouncementGroup(user.institutionId);
-      if (!announcementGroup) {
-        announcementGroup = await createAnnouncementGroup(user.institutionId);
-      }
-
-      // Add announcement group to the groups list if not already present
-      const hasAnnouncement = userGroups.some((g) => g.isAnnouncement);
-      if (!hasAnnouncement && announcementGroup) {
-        userGroups.unshift(announcementGroup); // Add to beginning of list
-      }
-    }
-
-    setGroups(userGroups);
-    setDMThreads(userDMs);
-  };
-
   const checkUserRole = async (groupId: string, userId: string) => {
     const members = await getGroupMembers(groupId);
     const userMember = members.find((m) => m.userId === userId);
@@ -135,9 +139,8 @@ export default function DashboardPage() {
   };
 
   const handleGroupCreated = () => {
-    if (user) {
-      loadChats(user);
-    }
+    // Refetch groups data after creating a new group
+    refetchGroups();
   };
 
   const handleMemberAdded = () => {
@@ -163,12 +166,9 @@ export default function DashboardPage() {
     }
 
     try {
-      await deleteGroup(groupId);
+      await deleteGroupMutation.mutateAsync({ groupId, userId: user!.$id });
       if (selectedChat?.id === groupId) {
         setSelectedChat(null);
-      }
-      if (user) {
-        loadChats(user);
       }
     } catch (error) {
       console.error("Error deleting group:", error);
@@ -285,17 +285,41 @@ export default function DashboardPage() {
               {/* Chat List */}
               <div className="flex-1 overflow-y-auto">
                 {activeSection === "Chats" && (
-                  <div className="p-2 space-y-1">
-                    {dmThreads.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  <motion.div
+                    className="p-2 space-y-1"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    {dmThreadsLoading ? (
+                      <motion.div
+                        className="text-center py-8 text-gray-500 dark:text-gray-400"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                      >
+                        <Loader2 className="h-8 w-8 mx-auto mb-2 animate-spin" />
+                        <p className="text-sm">Loading chats...</p>
+                      </motion.div>
+                    ) : dmThreads.length === 0 ? (
+                      <motion.div
+                        className="text-center py-8 text-gray-500 dark:text-gray-400"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                      >
                         <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
                         <p className="text-sm">No messages yet</p>
-                      </div>
+                      </motion.div>
                     ) : (
-                      dmThreads.map((thread) => {
+                      dmThreads.map((thread, index) => {
                         const partner = getDMPartner(thread);
                         return (
-                          <button
+                          <motion.button
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.05 }}
+                            whileHover={{ scale: 1.02, x: 4 }}
+                            whileTap={{ scale: 0.98 }}
                             key={thread.$id}
                             onClick={() => {
                               setSelectedChat({
@@ -321,25 +345,49 @@ export default function DashboardPage() {
                                 </div>
                               )}
                             </div>
-                          </button>
+                          </motion.button>
                         );
                       })
                     )}
-                  </div>
+                  </motion.div>
                 )}
 
                 {activeSection === "Groups" && (
-                  <div className="p-2 space-y-1">
-                    {groups.filter((g) => !g.isAnnouncement).length === 0 ? (
-                      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  <motion.div
+                    className="p-2 space-y-1"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    {groupsLoading ? (
+                      <motion.div
+                        className="text-center py-8 text-gray-500 dark:text-gray-400"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                      >
+                        <Loader2 className="h-8 w-8 mx-auto mb-2 animate-spin" />
+                        <p className="text-sm">Loading groups...</p>
+                      </motion.div>
+                    ) : groups.filter((g) => !g.isAnnouncement).length === 0 ? (
+                      <motion.div
+                        className="text-center py-8 text-gray-500 dark:text-gray-400"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                      >
                         <Hash className="h-8 w-8 mx-auto mb-2 opacity-50" />
                         <p className="text-sm">No groups yet</p>
-                      </div>
+                      </motion.div>
                     ) : (
                       groups
                         .filter((g) => !g.isAnnouncement)
-                        .map((group) => (
-                          <button
+                        .map((group, index) => (
+                          <motion.button
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.05 }}
+                            whileHover={{ scale: 1.02, x: 4 }}
+                            whileTap={{ scale: 0.98 }}
                             key={group.$id}
                             onClick={() => {
                               setSelectedChat({
@@ -364,24 +412,48 @@ export default function DashboardPage() {
                                 </div>
                               )}
                             </div>
-                          </button>
+                          </motion.button>
                         ))
                     )}
-                  </div>
+                  </motion.div>
                 )}
 
                 {activeSection === "Announcements" && (
-                  <div className="p-2 space-y-1">
-                    {groups.filter((g) => g.isAnnouncement).length === 0 ? (
-                      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  <motion.div
+                    className="p-2 space-y-1"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    {groupsLoading ? (
+                      <motion.div
+                        className="text-center py-8 text-gray-500 dark:text-gray-400"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                      >
+                        <Loader2 className="h-8 w-8 mx-auto mb-2 animate-spin" />
+                        <p className="text-sm">Loading announcements...</p>
+                      </motion.div>
+                    ) : groups.filter((g) => g.isAnnouncement).length === 0 ? (
+                      <motion.div
+                        className="text-center py-8 text-gray-500 dark:text-gray-400"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                      >
                         <Megaphone className="h-8 w-8 mx-auto mb-2 opacity-50" />
                         <p className="text-sm">No announcements</p>
-                      </div>
+                      </motion.div>
                     ) : (
                       groups
                         .filter((g) => g.isAnnouncement)
-                        .map((group) => (
-                          <button
+                        .map((group, index) => (
+                          <motion.button
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.05 }}
+                            whileHover={{ scale: 1.02, x: 4 }}
+                            whileTap={{ scale: 0.98 }}
                             key={group.$id}
                             onClick={() => {
                               setSelectedChat({
@@ -404,16 +476,28 @@ export default function DashboardPage() {
                                 📢 Announcement Channel
                               </div>
                             </div>
-                          </button>
+                          </motion.button>
                         ))
                     )}
-                  </div>
+                  </motion.div>
                 )}
               </div>
 
               {/* Floating Action Button for New Chat/Group */}
               {activeSection === "Chats" && user && (
-                <div className="fixed bottom-6 right-6 z-50">
+                <motion.div
+                  className="fixed bottom-6 right-6 z-50"
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{
+                    delay: 0.3,
+                    type: "spring",
+                    stiffness: 260,
+                    damping: 20,
+                  }}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
                   <StartDMDialog
                     institutionId={user.institutionId}
                     currentUserId={user.$id}
@@ -423,17 +507,29 @@ export default function DashboardPage() {
                     }}
                     isMobile={true}
                   />
-                </div>
+                </motion.div>
               )}
               {activeSection === "Groups" && user && (
-                <div className="fixed bottom-6 right-6 z-50">
+                <motion.div
+                  className="fixed bottom-6 right-6 z-50"
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{
+                    delay: 0.3,
+                    type: "spring",
+                    stiffness: 260,
+                    damping: 20,
+                  }}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
                   <CreateGroupDialog
                     institutionId={user.institutionId}
                     userId={user.$id}
                     onGroupCreated={handleGroupCreated}
                     isMobile={true}
                   />
-                </div>
+                </motion.div>
               )}
             </div>
           ) : (

@@ -142,7 +142,7 @@ export async function registerUser(
         status: "pending",
         createdAt: timestamp,
         lastLogin: timestamp,
-        institutionId: institution.$id,
+        institutionId: institutionCode, // Store the institution code instead of ID
         institutionName: truncatedInstitutionName,
       }
     );
