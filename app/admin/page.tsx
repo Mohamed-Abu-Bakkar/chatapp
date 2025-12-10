@@ -176,6 +176,10 @@ export default function AdminPage() {
     }
   };
 
+  const handleBackToDashboard = () => {
+    router.push("/dashboard");
+  };
+
   const handleLogout = async () => {
     await logoutUser();
     router.push("/login");
@@ -199,9 +203,14 @@ export default function AdminPage() {
               Manage users and institution settings
             </p>
           </div>
-          <Button variant="outline" onClick={handleLogout}>
-            Logout
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="ghost" onClick={handleBackToDashboard}>
+              Back to Dashboard
+            </Button>
+            <Button variant="outline" onClick={handleLogout}>
+              Logout
+            </Button>
+          </div>
         </div>
 
         <Card>
