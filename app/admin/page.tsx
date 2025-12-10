@@ -31,7 +31,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { realtime } from "@/app/lib/appwrite";
-import type { RealtimeSubscription } from "appwrite";
 
 const DATABASE_ID =
   process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || "academic_chat_db";
@@ -46,7 +45,9 @@ export default function AdminPage() {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingUsers, setLoadingUsers] = useState(false);
-  const subscriptionRef = useRef<RealtimeSubscription | null>(null);
+  const subscriptionRef = useRef<Awaited<
+    ReturnType<typeof realtime.subscribe>
+  > | null>(null);
 
   const loadPendingUsers = useCallback(async () => {
     try {
