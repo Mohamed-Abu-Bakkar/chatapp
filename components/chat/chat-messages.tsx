@@ -10,8 +10,20 @@ import {
   getDirectMessages,
   deleteMessageForMe,
   deleteMessageForEveryone,
+  parseMessageContent,
 } from "@/app/lib/chat-service";
 import type { Message } from "@/app/lib/chat-types";
+import {
+  trackMessageServerAction,
+  trackUserActivityServerAction,
+  startChatSessionServerAction,
+  endChatSessionServerAction,
+  trackFileUploadServerAction,
+} from "@/lib/analytics-actions";
+import { generateReactHelpers } from "@uploadthing/react";
+import type { OurFileRouter } from "@/app/api/uploadthing/core";
+
+const { useUploadThing } = generateReactHelpers<OurFileRouter>();
 import {
   Send,
   MoreVertical,
@@ -19,6 +31,8 @@ import {
   MessageSquare,
   Megaphone,
   Clock,
+  Image,
+  Loader2,
 } from "lucide-react";
 import { realtime } from "@/app/lib/appwrite";
 
@@ -41,6 +55,8 @@ export function ChatMessages({
   userRole,
   isAnnouncement,
 }: ChatMessagesProps) {
+  const { startUpload } = useUploadThing("mediaUploader");
+
   console.log("ChatMessages props:", {
     type,
     chatId,
@@ -50,8 +66,15 @@ export function ChatMessages({
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingMessages, setLoadingMessages] = useState(true);
+  const [uploadedMedia, setUploadedMedia] = useState<{
+    url: string;
+    type: "image" | "video" | "audio" | "document";
+    name: string;
+  } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const subscriptionRef = useRef<any>(null);
+  const sessionIdRef = useRef<string | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -61,6 +84,26 @@ export function ChatMessages({
     loadMessages();
     setupRealtimeSubscription();
 
+    // Start chat session analytics
+    const startSession = async () => {
+      try {
+        const sessionId = await startChatSessionServerAction(
+          currentUserId,
+          currentUsername,
+          userRole || "student",
+          chatId,
+          type,
+          undefined, // chatName - could be added later
+          recipientId,
+          undefined // recipientUsername - could be added later
+        );
+        sessionIdRef.current = sessionId;
+      } catch (error) {
+        console.error("Error starting chat session:", error);
+      }
+    };
+    startSession();
+
     return () => {
       if (
         subscriptionRef.current &&
@@ -68,6 +111,14 @@ export function ChatMessages({
       ) {
         subscriptionRef.current();
         subscriptionRef.current = null;
+      }
+
+      // End chat session analytics
+      if (sessionIdRef.current) {
+        endChatSessionServerAction(sessionIdRef.current).catch((error) => {
+          console.error("Error ending chat session:", error);
+        });
+        sessionIdRef.current = null;
       }
     };
   }, [chatId, type]);
@@ -78,6 +129,7 @@ export function ChatMessages({
 
   const loadMessages = async () => {
     try {
+      setLoadingMessages(true);
       let fetchedMessages: Message[] = [];
       if (type === "group") {
         fetchedMessages = await getGroupMessages(chatId, currentUserId);
@@ -91,6 +143,8 @@ export function ChatMessages({
       setMessages(fetchedMessages);
     } catch (error) {
       console.error("Error loading messages:", error);
+    } finally {
+      setLoadingMessages(false);
     }
   };
 
@@ -99,15 +153,27 @@ export function ChatMessages({
       const DATABASE_ID =
         process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || "69134fb7001b67bbe609";
 
+      console.log(
+        "Setting up real-time subscription for database:",
+        DATABASE_ID
+      );
+
       const unsubscribe = realtime.subscribe(
         `databases.${DATABASE_ID}.collections.messages.documents`,
         (response: any) => {
+          console.log(
+            "Real-time event received:",
+            response.events,
+            response.payload
+          );
+
           if (
             response.events.includes(
               "databases.*.collections.*.documents.*.create"
             )
           ) {
             const newMsg = response.payload as Message;
+            console.log("New message received:", newMsg);
 
             // Only add if it belongs to this chat and doesn't already exist
             const shouldAdd =
@@ -118,12 +184,52 @@ export function ChatMessages({
                   (newMsg.senderId === recipientId &&
                     newMsg.recipientId === currentUserId)));
 
+            console.log("Should add message?", shouldAdd, {
+              type,
+              chatId,
+              currentUserId,
+              recipientId,
+              newMsgGroupId: newMsg.groupId,
+              newMsgSenderId: newMsg.senderId,
+              newMsgRecipientId: newMsg.recipientId,
+            });
+
             if (shouldAdd) {
               setMessages((prev) => {
                 // Check if message already exists to prevent duplicates
                 const exists = prev.some((msg) => msg.$id === newMsg.$id);
+                console.log("Message exists already?", exists);
                 if (!exists) {
-                  return [...prev, newMsg];
+                  const parsedMsg = parseMessageContent(newMsg);
+                  console.log("Adding parsed message to state:", parsedMsg);
+
+                  // Track received message analytics (only for messages not sent by current user)
+                  if (newMsg.senderId !== currentUserId) {
+                    trackMessageServerAction(
+                      parsedMsg,
+                      type,
+                      userRole || "student"
+                    ).catch((error) => {
+                      console.error(
+                        "Error tracking received message analytics:",
+                        error
+                      );
+                    });
+                    trackUserActivityServerAction(
+                      currentUserId,
+                      currentUsername,
+                      userRole || "student",
+                      "message_received",
+                      undefined
+                    ).catch((error) => {
+                      console.error(
+                        "Error tracking message received activity:",
+                        error
+                      );
+                    });
+                  }
+
+                  return [...prev, parsedMsg];
                 }
                 return prev;
               });
@@ -157,7 +263,9 @@ export function ChatMessages({
                 } else {
                   // Update the message in local state
                   return prev.map((msg) =>
-                    msg.$id === updatedMsg.$id ? updatedMsg : msg
+                    msg.$id === updatedMsg.$id
+                      ? parseMessageContent(updatedMsg)
+                      : msg
                   );
                 }
               });
@@ -177,6 +285,7 @@ export function ChatMessages({
         }
       );
 
+      console.log("Real-time subscription set up successfully");
       subscriptionRef.current = unsubscribe;
     } catch (error) {
       console.error("Error setting up realtime subscription:", error);
@@ -218,20 +327,76 @@ export function ChatMessages({
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() && !uploadedMedia) return;
 
     setLoading(true);
     try {
+      console.log("Sending message with media:", {
+        newMessage,
+        uploadedMedia,
+        type,
+        chatId,
+        recipientId,
+      });
+
       await sendMessage(
         currentUserId,
         currentUsername,
-        newMessage,
+        newMessage.trim() || "", // Send empty string if no text, media will be handled separately
         type,
         type === "group" ? chatId : undefined,
         type === "direct" ? recipientId : undefined,
-        userRole
+        userRole,
+        uploadedMedia?.url,
+        uploadedMedia?.type,
+        uploadedMedia?.name
       );
+
+      // Track message analytics
+      try {
+        const messageContent = newMessage.trim();
+        const hasMedia = !!uploadedMedia;
+        const mockMessage: Message = {
+          $id: `temp_${Date.now()}`, // Temporary ID for analytics
+          senderId: currentUserId,
+          senderUsername: currentUsername,
+          content: JSON.stringify({
+            text: messageContent,
+            mediaUrl: uploadedMedia?.url,
+            mediaType: uploadedMedia?.type,
+            fileName: uploadedMedia?.name,
+          }),
+          groupId: type === "group" ? chatId : undefined,
+          recipientId: type === "direct" ? recipientId : undefined,
+          type,
+          createdAt: new Date().toISOString(),
+          readBy: [],
+          deletedBy: undefined,
+          deletedForEveryone: false,
+          mediaUrl: uploadedMedia?.url,
+          mediaType: uploadedMedia?.type as any,
+          fileName: uploadedMedia?.name,
+        };
+
+        await trackMessageServerAction(
+          mockMessage,
+          type,
+          userRole || "student"
+        );
+        await trackUserActivityServerAction(
+          currentUserId,
+          currentUsername,
+          userRole || "student",
+          "message_sent",
+          { messageLength: messageContent.length, hasMedia }
+        );
+      } catch (analyticsError) {
+        console.error("Error tracking analytics:", analyticsError);
+        // Don't fail the message send if analytics fails
+      }
+
       setNewMessage("");
+      setUploadedMedia(null);
     } catch (error) {
       console.error("Error sending message:", error);
       alert(error instanceof Error ? error.message : "Failed to send message");
@@ -245,7 +410,19 @@ export function ChatMessages({
       {/* Messages Container */}
       <div className="flex-1 overflow-hidden relative">
         <div className="absolute inset-0 overflow-y-auto px-2 py-3 space-y-2 md:px-4 md:py-6 md:space-y-6 chat-messages-scroll">
-          {messages.length === 0 ? (
+          {loadingMessages ? (
+            <div className="flex flex-col items-center justify-center h-full text-center py-12 px-4">
+              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4 md:w-20 md:h-20">
+                <Loader2 className="w-8 h-8 text-blue-600 animate-spin md:w-10 md:h-10" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2 md:text-2xl">
+                Loading messages...
+              </h3>
+              <p className="text-base text-gray-500 dark:text-gray-400 max-w-sm leading-relaxed px-2">
+                Please wait while we fetch your messages.
+              </p>
+            </div>
+          ) : messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center py-12 px-4">
               <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4 md:w-20 md:h-20">
                 {isAnnouncement ? (
@@ -344,8 +521,81 @@ export function ChatMessages({
                           </div>
                         ) : (
                           <>
+                            {msg.mediaUrl && (
+                              <div className="mb-2">
+                                {msg.mediaType === "image" && (
+                                  <div>
+                                    <img
+                                      src={msg.mediaUrl}
+                                      alt={msg.fileName || "Shared image"}
+                                      className="max-w-full h-auto rounded-lg cursor-pointer"
+                                      onClick={() =>
+                                        window.open(msg.mediaUrl, "_blank")
+                                      }
+                                      onError={(e) => {
+                                        console.error(
+                                          "Image failed to load:",
+                                          msg.mediaUrl,
+                                          e
+                                        );
+                                        // Fallback: show as link
+                                        e.currentTarget.style.display = "none";
+                                        const fallback = e.currentTarget
+                                          .nextElementSibling as HTMLElement;
+                                        if (fallback)
+                                          fallback.style.display = "block";
+                                      }}
+                                      onLoad={() =>
+                                        console.log(
+                                          "Image loaded successfully:",
+                                          msg.mediaUrl
+                                        )
+                                      }
+                                    />
+                                    <a
+                                      href={msg.mediaUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="hidden text-blue-600 hover:text-blue-800 underline"
+                                    >
+                                      {msg.fileName || "View image"}
+                                    </a>
+                                  </div>
+                                )}
+                                {msg.mediaType === "video" && (
+                                  <video
+                                    src={msg.mediaUrl}
+                                    controls
+                                    className="max-w-full h-auto rounded-lg"
+                                  />
+                                )}
+                                {msg.mediaType === "audio" && (
+                                  <audio
+                                    src={msg.mediaUrl}
+                                    controls
+                                    className="w-full"
+                                  />
+                                )}
+                                {msg.mediaType === "document" && (
+                                  <a
+                                    href={msg.mediaUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-2 p-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                                  >
+                                    <MessageSquare className="w-4 h-4" />
+                                    <span className="text-sm truncate">
+                                      {msg.fileName || "Document"}
+                                    </span>
+                                  </a>
+                                )}
+                              </div>
+                            )}
                             <div className="text-sm md:text-base leading-relaxed break-words">
-                              {msg.content}
+                              {msg.content ||
+                                (msg.mediaUrl
+                                  ? `Shared ${msg.mediaType}: ${msg.fileName}`
+                                  : "")}
                             </div>
                             <div
                               className={`flex items-center justify-end gap-1 mt-1 text-xs md:mt-2 ${
@@ -427,43 +677,213 @@ export function ChatMessages({
         return canSend;
       })() && (
         <div className="bg-white dark:bg-gray-950 border-t border-gray-200 dark:border-gray-800 px-3 py-2 md:px-4 md:py-4 safe-area-inset-bottom">
-          <form
-            onSubmit={handleSend}
-            className="flex items-end gap-2 md:gap-3 max-w-4xl mx-auto"
-          >
-            <div className="flex-1 relative">
-              <Input
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                placeholder={
-                  isAnnouncement
-                    ? "Send an announcement..."
-                    : "Type a message..."
-                }
-                disabled={loading}
-                maxLength={5000}
-                className="min-h-10 md:min-h-11 resize-none border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 rounded-full px-4 py-2 md:px-4 md:py-3 pr-12 md:pr-12 text-base shadow-sm"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend(e);
-                  }
-                }}
-              />
-              {newMessage.length > 4500 && (
-                <div className="absolute -top-6 right-0 text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-950 px-2 py-1 rounded shadow-sm">
-                  {5000 - newMessage.length} left
-                </div>
-              )}
-            </div>
-            <Button
-              type="submit"
-              disabled={loading || !newMessage.trim()}
-              className="h-10 w-10 md:h-11 md:w-11 p-0 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 rounded-full shadow-md transition-all duration-200 shrink-0 active:scale-95"
+          <div className="flex flex-col gap-2 max-w-4xl mx-auto">
+            {loading && (
+              <div className="flex items-center justify-center gap-2 text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 rounded-lg py-2 px-4">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Sending message...
+              </div>
+            )}
+            <form
+              onSubmit={handleSend}
+              className="flex items-end gap-2 md:gap-3"
             >
-              <Send className="h-4 w-4 md:h-5 md:w-5" />
-            </Button>
-          </form>
+              <div className="flex-1 relative">
+                <Input
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  placeholder={
+                    isAnnouncement
+                      ? "Send an announcement..."
+                      : "Type a message..."
+                  }
+                  disabled={loading}
+                  maxLength={5000}
+                  className="min-h-10 md:min-h-11 resize-none border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 rounded-full px-4 py-3 md:px-4 md:py-3 pr-12 md:pr-12 text-base shadow-sm"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSend(e);
+                    }
+                  }}
+                />
+                {uploadedMedia && (
+                  <div className="absolute -top-12 left-0 right-0 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-2 flex items-center gap-2">
+                    <span className="text-sm text-blue-700 dark:text-blue-300 truncate">
+                      {uploadedMedia.name}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setUploadedMedia(null)}
+                      className="h-6 w-6 p-0 text-blue-600 hover:text-blue-800"
+                    >
+                      ×
+                    </Button>
+                  </div>
+                )}
+                {loading && (
+                  <div className="absolute right-12 top-1/2 transform -translate-y-1/2 flex items-center">
+                    <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
+                  </div>
+                )}
+                {newMessage.length > 4500 && (
+                  <div className="absolute -top-6 right-0 text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-950 px-2 py-1 rounded shadow-sm">
+                    {5000 - newMessage.length} left
+                  </div>
+                )}
+              </div>
+              <Button
+                type="button"
+                onClick={() => {
+                  const input = document.createElement("input");
+                  input.type = "file";
+                  input.accept = "image/*,video/*,audio/*,.pdf,.doc,.docx,.txt";
+                  input.multiple = false;
+                  input.onchange = async (e) => {
+                    const file = (e.target as HTMLInputElement).files?.[0];
+                    if (file) {
+                      console.log("File selected:", file);
+                      try {
+                        const result = await startUpload([file]);
+                        if (result && result[0]) {
+                          const uploadedFile = result[0];
+                          console.log("Upload complete, result:", uploadedFile);
+
+                          // Determine media type based on MIME type or file extension
+                          let mediaType:
+                            | "image"
+                            | "video"
+                            | "audio"
+                            | "document" = "document";
+                          const mimeType = uploadedFile.type || file.type;
+                          const fileName = uploadedFile.name || file.name;
+
+                          console.log(
+                            "File MIME type:",
+                            mimeType,
+                            "File name:",
+                            fileName
+                          );
+
+                          if (mimeType?.startsWith("image/")) {
+                            mediaType = "image";
+                          } else if (mimeType?.startsWith("video/")) {
+                            mediaType = "video";
+                          } else if (mimeType?.startsWith("audio/")) {
+                            mediaType = "audio";
+                          } else {
+                            // Fallback to extension-based detection
+                            const extension = fileName
+                              .toLowerCase()
+                              .split(".")
+                              .pop();
+                            console.log(
+                              "Using extension fallback, extension:",
+                              extension
+                            );
+                            if (
+                              [
+                                "jpg",
+                                "jpeg",
+                                "png",
+                                "gif",
+                                "webp",
+                                "bmp",
+                                "svg",
+                              ].includes(extension || "")
+                            ) {
+                              mediaType = "image";
+                            } else if (
+                              [
+                                "mp4",
+                                "webm",
+                                "avi",
+                                "mov",
+                                "wmv",
+                                "flv",
+                              ].includes(extension || "")
+                            ) {
+                              mediaType = "video";
+                            } else if (
+                              [
+                                "mp3",
+                                "wav",
+                                "ogg",
+                                "aac",
+                                "flac",
+                                "m4a",
+                              ].includes(extension || "")
+                            ) {
+                              mediaType = "audio";
+                            }
+                          }
+
+                          console.log(
+                            "Final determined media type:",
+                            mediaType
+                          );
+
+                          setUploadedMedia({
+                            url: uploadedFile.ufsUrl,
+                            type: mediaType,
+                            name: fileName,
+                          });
+
+                          // Track file upload analytics
+                          try {
+                            await trackUserActivityServerAction(
+                              currentUserId,
+                              currentUsername,
+                              userRole || "student",
+                              "file_upload",
+                              {
+                                fileSize: file.size,
+                                fileType: mimeType,
+                                mediaType,
+                              },
+                              chatId,
+                              type
+                            );
+                          } catch (analyticsError) {
+                            console.error(
+                              "Error tracking file upload analytics:",
+                              analyticsError
+                            );
+                          }
+                        }
+                      } catch (error) {
+                        console.error("Upload failed:", error);
+                        alert(
+                          `Upload failed: ${
+                            error instanceof Error
+                              ? error.message
+                              : "Unknown error"
+                          }`
+                        );
+                      }
+                    }
+                  };
+                  input.click();
+                }}
+                className="h-10 w-10 md:h-11 md:w-11 p-0 bg-gray-600 hover:bg-gray-700 rounded-full shadow-md transition-all duration-200 shrink-0 flex items-center justify-center"
+              >
+                <Image className="h-4 w-4 md:h-5 md:w-5 text-white" />
+              </Button>
+              <Button
+                type="submit"
+                disabled={loading || (!newMessage.trim() && !uploadedMedia)}
+                className="h-10 w-10 md:h-11 md:w-11 p-0 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 rounded-full shadow-md transition-all duration-200 shrink-0 active:scale-95"
+              >
+                {loading ? (
+                  <Loader2 className="h-4 w-4 md:h-5 md:w-5 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4 md:h-5 md:w-5" />
+                )}
+              </Button>
+            </form>
+          </div>
         </div>
       )}
 

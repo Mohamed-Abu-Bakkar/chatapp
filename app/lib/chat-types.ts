@@ -10,6 +10,9 @@ export interface Message {
   readBy: string[];
   deletedBy?: string[];
   deletedForEveryone?: boolean;
+  mediaUrl?: string;
+  mediaType?: "image" | "video" | "audio" | "document";
+  fileName?: string;
   $createdAt?: string;
   $updatedAt?: string;
 }

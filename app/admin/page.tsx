@@ -30,6 +30,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { AnalyticsDashboard } from "@/components/analytics/analytics-dashboard";
 import { realtime } from "@/app/lib/appwrite";
 
 const DATABASE_ID =
@@ -45,6 +46,7 @@ export default function AdminPage() {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [activeTab, setActiveTab] = useState<"users" | "analytics">("users");
   const subscriptionRef = useRef<Awaited<
     ReturnType<typeof realtime.subscribe>
   > | null>(null);
@@ -205,7 +207,7 @@ export default function AdminPage() {
           </div>
           <div className="flex gap-2">
             <Button variant="ghost" onClick={handleBackToDashboard}>
-              Back to Dashboard
+              Back to Chat
             </Button>
             <Button variant="outline" onClick={handleLogout}>
               Logout
@@ -213,151 +215,181 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Pending User Approvals</CardTitle>
-            <CardDescription>
-              Review and approve new user registrations
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="text-center py-8">Loading...</div>
-            ) : pendingUsers.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No pending users at this time.
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {pendingUsers.map((pendingUser) => (
-                  <div
-                    key={pendingUser.$id}
-                    className="flex items-center justify-between p-4 border rounded-md"
-                  >
-                    <div>
-                      <div className="font-medium">{pendingUser.username}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {pendingUser.email}
-                      </div>
-                      {pendingUser.institutionName && (
-                        <div className="text-xs text-muted-foreground mt-1">
-                          Institution: {pendingUser.institutionName}
-                        </div>
-                      )}
-                    </div>
-                    <Button
-                      onClick={() => handleApprove(pendingUser.$id)}
-                      size="sm"
-                    >
-                      Approve
-                    </Button>
+        {/* Tab Navigation */}
+        <div className="flex space-x-1 mb-6 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg w-fit">
+          <Button
+            variant={activeTab === "users" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setActiveTab("users")}
+            className="px-6"
+          >
+            User Management
+          </Button>
+          <Button
+            variant={activeTab === "analytics" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setActiveTab("analytics")}
+            className="px-6"
+          >
+            Analytics
+          </Button>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === "users" ? (
+          <>
+            <Card>
+              <CardHeader>
+                <CardTitle>Pending User Approvals</CardTitle>
+                <CardDescription>
+                  Review and approve new user registrations
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="text-center py-8">Loading...</div>
+                ) : pendingUsers.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No pending users at this time.
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>User Management</CardTitle>
-            <CardDescription>
-              View and manage all users in the system
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="mb-4">
-              <Button
-                onClick={loadAllUsers}
-                disabled={loadingUsers}
-                variant="outline"
-              >
-                {loadingUsers ? "Loading..." : "Refresh Users"}
-              </Button>
-            </div>
-
-            {loadingUsers ? (
-              <div className="text-center py-8">Loading users...</div>
-            ) : allUsers.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No users found.
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {allUsers.map((user) => (
-                  <div
-                    key={user.$id}
-                    className="flex items-center justify-between p-4 border rounded-md"
-                  >
-                    <div className="flex-1">
-                      <div className="font-medium">{user.username}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {user.email}
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        Role: {user.role} | Status: {user.status}
-                      </div>
-                      {user.institutionName && (
-                        <div className="text-xs text-muted-foreground">
-                          Institution: {user.institutionName}
-                        </div>
-                      )}
-                      <div className="text-xs text-muted-foreground">
-                        Joined: {new Date(user.createdAt).toLocaleDateString()}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {/* Role Selection */}
-                      <select
-                        aria-label={`Change role for ${user.username}`}
-                        value={user.role}
-                        onChange={(e) =>
-                          handleRoleChange(
-                            user.$id,
-                            e.target.value as User["role"]
-                          )
-                        }
-                        className="px-2 py-1 border rounded text-sm"
+                ) : (
+                  <div className="space-y-4">
+                    {pendingUsers.map((pendingUser) => (
+                      <div
+                        key={pendingUser.$id}
+                        className="flex items-center justify-between p-4 border rounded-md"
                       >
-                        <option value="student">Student</option>
-                        <option value="teacher">Teacher</option>
-                        <option value="admin">Admin</option>
-                      </select>
-
-                      {/* Delete Button */}
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button variant="destructive" size="sm">
-                            Delete
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Delete User</DialogTitle>
-                            <DialogDescription>
-                              Are you sure you want to delete {user.username}?
-                              This action cannot be undone.
-                            </DialogDescription>
-                          </DialogHeader>
-                          <DialogFooter>
-                            <Button variant="outline">Cancel</Button>
-                            <Button
-                              variant="destructive"
-                              onClick={() => handleDeleteUser(user.$id)}
-                            >
-                              Delete User
-                            </Button>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
-                    </div>
+                        <div>
+                          <div className="font-medium">
+                            {pendingUser.username}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {pendingUser.email}
+                          </div>
+                          {pendingUser.institutionName && (
+                            <div className="text-xs text-muted-foreground mt-1">
+                              Institution: {pendingUser.institutionName}
+                            </div>
+                          )}
+                        </div>
+                        <Button
+                          onClick={() => handleApprove(pendingUser.$id)}
+                          size="sm"
+                        >
+                          Approve
+                        </Button>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>User Management</CardTitle>
+                <CardDescription>
+                  View and manage all users in the system
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="mb-4">
+                  <Button
+                    onClick={loadAllUsers}
+                    disabled={loadingUsers}
+                    variant="outline"
+                  >
+                    {loadingUsers ? "Loading..." : "Refresh Users"}
+                  </Button>
+                </div>
+
+                {loadingUsers ? (
+                  <div className="text-center py-8">Loading users...</div>
+                ) : allUsers.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No users found.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {allUsers.map((user) => (
+                      <div
+                        key={user.$id}
+                        className="flex items-center justify-between p-4 border rounded-md"
+                      >
+                        <div className="flex-1">
+                          <div className="font-medium">{user.username}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {user.email}
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            Role: {user.role} | Status: {user.status}
+                          </div>
+                          {user.institutionName && (
+                            <div className="text-xs text-muted-foreground">
+                              Institution: {user.institutionName}
+                            </div>
+                          )}
+                          <div className="text-xs text-muted-foreground">
+                            Joined:{" "}
+                            {new Date(user.createdAt).toLocaleDateString()}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {/* Role Selection */}
+                          <select
+                            aria-label={`Change role for ${user.username}`}
+                            value={user.role}
+                            onChange={(e) =>
+                              handleRoleChange(
+                                user.$id,
+                                e.target.value as User["role"]
+                              )
+                            }
+                            className="px-2 py-1 border rounded text-sm"
+                          >
+                            <option value="student">Student</option>
+                            <option value="teacher">Teacher</option>
+                            <option value="admin">Admin</option>
+                          </select>
+
+                          {/* Delete Button */}
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button variant="destructive" size="sm">
+                                Delete
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Delete User</DialogTitle>
+                                <DialogDescription>
+                                  Are you sure you want to delete{" "}
+                                  {user.username}? This action cannot be undone.
+                                </DialogDescription>
+                              </DialogHeader>
+                              <DialogFooter>
+                                <Button variant="outline">Cancel</Button>
+                                <Button
+                                  variant="destructive"
+                                  onClick={() => handleDeleteUser(user.$id)}
+                                >
+                                  Delete User
+                                </Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </>
+        ) : (
+          <AnalyticsDashboard />
+        )}
       </div>
     </div>
   );

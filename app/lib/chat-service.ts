@@ -2,6 +2,32 @@
 
 import { databases } from "./appwrite";
 import { ID, Query } from "appwrite";
+
+// Helper function to parse message content and extract media info
+export function parseMessageContent(message: any): Message {
+  const parsedMessage = { ...message } as Message;
+
+  console.log("Parsing message content:", message.content);
+
+  // Check if content is JSON with media info
+  try {
+    const contentData = JSON.parse(message.content);
+    if (contentData.mediaUrl && contentData.originalContent !== undefined) {
+      // This is a media message
+      console.log("Found media message:", contentData);
+      parsedMessage.content = contentData.originalContent;
+      parsedMessage.mediaUrl = contentData.mediaUrl;
+      parsedMessage.mediaType = contentData.mediaType;
+      parsedMessage.fileName = contentData.fileName;
+    }
+  } catch (e) {
+    // Content is regular text, use as is
+    console.log("Regular text message:", message.content);
+  }
+
+  console.log("Parsed message:", parsedMessage);
+  return parsedMessage;
+}
 import type { Message, Group, GroupMember, DirectMessageThread } from "./chat-types";
 
 const DATABASE_ID = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || "69134fb7001b67bbe609";
@@ -20,7 +46,10 @@ export async function sendMessage(
   type: "group" | "direct",
   groupId?: string,
   recipientId?: string,
-  userRole?: string
+  userRole?: string,
+  mediaUrl?: string,
+  mediaType?: "image" | "video" | "audio" | "document",
+  fileName?: string
 ): Promise<Message> {
   try {
         // Check permissions for announcement groups
@@ -40,6 +69,20 @@ export async function sendMessage(
       readBy: [senderId],
     };
 
+    // For now, store media info in content as JSON until database schema is updated
+    if (mediaUrl) {
+      const mediaInfo = {
+        mediaUrl,
+        mediaType,
+        fileName,
+        originalContent: content || "" // Store the text content, even if empty
+      };
+      messageData.content = JSON.stringify(mediaInfo);
+      console.log("Storing media message:", mediaInfo);
+    } else {
+      console.log("Storing text message:", content);
+    }
+
     if (type === "group" && groupId) {
       messageData.groupId = groupId;
     } else if (type === "direct" && recipientId) {
@@ -49,6 +92,18 @@ export async function sendMessage(
       await updateDMThread(senderId, senderUsername, recipientId, content);
     }
 
+    console.log("Sending message to database:", {
+      senderId,
+      senderUsername,
+      content: messageData.content,
+      type,
+      groupId,
+      recipientId,
+      mediaUrl,
+      mediaType,
+      fileName
+    });
+
     const message = await databases.createDocument(
       DATABASE_ID,
       MESSAGES_COLLECTION,
@@ -56,7 +111,8 @@ export async function sendMessage(
       messageData
     );
 
-    return message as unknown as Message;
+    console.log("Message created in database:", message);
+    return parseMessageContent(message);
   } catch (error) {
     console.error("Error sending message:", error);
     throw new Error("Failed to send message");
@@ -76,13 +132,15 @@ export async function getGroupMessages(groupId: string, userId: string, limit: n
       ]
     );
 
-    // Filter out messages deleted by this user
-    const filteredMessages = response.documents.filter((message: any) => {
-      const deletedBy = message.deletedBy || [];
-      return !deletedBy.includes(userId);
-    });
+    // Filter out messages deleted by this user and parse content
+    const filteredMessages = response.documents
+      .filter((message: any) => {
+        const deletedBy = message.deletedBy || [];
+        return !deletedBy.includes(userId);
+      })
+      .map(parseMessageContent);
 
-    return filteredMessages.reverse() as unknown as Message[];
+    return filteredMessages.reverse();
   } catch (error) {
     console.error("Error fetching group messages:", error);
     return [];
@@ -116,13 +174,15 @@ export async function getDirectMessages(
       ]
     );
 
-    // Filter out messages deleted by the current user
-    const filteredMessages = response.documents.filter((message: any) => {
-      const deletedBy = message.deletedBy || [];
-      return !deletedBy.includes(currentUserId);
-    });
+    // Filter out messages deleted by the current user and parse content
+    const filteredMessages = response.documents
+      .filter((message: any) => {
+        const deletedBy = message.deletedBy || [];
+        return !deletedBy.includes(currentUserId);
+      })
+      .map(parseMessageContent);
 
-    return filteredMessages.reverse() as unknown as Message[];
+    return filteredMessages.reverse();
   } catch (error) {
     console.error("Error fetching direct messages:", error);
     return [];
